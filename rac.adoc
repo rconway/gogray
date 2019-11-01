@@ -1,0 +1,16 @@
+
+.std
+image:std.png[std]
+
+.avg
+image:avg.png[std]
+
+.red
+image:red.png[std]
+
+.green
+image:green.png[std]
+
+.blue
+image:blue.png[std]
+
