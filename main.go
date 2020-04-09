@@ -3,7 +3,7 @@ package main
 import (
 	"image"
 	"image/color"
-	"image/jpeg"
+	_ "image/jpeg" // Import just for the side-effect of its init() method to perform format registration
 	"image/png"
 	"log"
 	"os"
@@ -52,6 +52,19 @@ func blueGrayConvert(c color.Color) color.Color {
 	return color.Gray{uint8(cgray)}
 }
 
+// blue channel only
+func ndviGrayConvert(c color.Color) color.Color {
+	r, g, b, _ := c.RGBA()
+	red := float64(r) / 0xffff
+	nir := (float64(g+b) / 2) / 0xffff
+	ndvi := 0.0
+	if nir != 0 || red != 0 {
+		ndvi = (nir - red) / (nir + red)
+	}
+	cgray := (((ndvi) * 255) + 255) / 2
+	return color.Gray{uint8(cgray)}
+}
+
 func convert(img image.Image, convert ConvertFunc, outFileName string) {
 	log.Println("START create of output: " + outFileName)
 	start := time.Now()
@@ -60,8 +73,9 @@ func convert(img image.Image, convert ConvertFunc, outFileName string) {
 	grayImg := image.NewGray(img.Bounds())
 
 	// Calculate ewach pixel
-	for y := img.Bounds().Min.Y; y < img.Bounds().Max.Y; y++ {
-		for x := img.Bounds().Min.X; x < img.Bounds().Max.X; x++ {
+	bounds := img.Bounds()
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			grayImg.Set(x, y, convert(img.At(x, y)))
 		}
 	}
@@ -90,13 +104,14 @@ func main() {
 	check(err)
 	defer f.Close()
 
-	img, err := jpeg.Decode(f)
+	img, format, err := image.Decode(f)
 	check(err)
-	log.Printf("Image type: %T, bounds: %v / %v\n", img, img.Bounds().Min, img.Bounds().Max)
+	log.Printf("Image (%v) object-type: %T, bounds: %v / %v\n", format, img, img.Bounds().Min, img.Bounds().Max)
 
 	convert(img, stdGrayConvert, "std.png")
 	convert(img, avgGrayConvert, "avg.png")
 	convert(img, redGrayConvert, "red.png")
 	convert(img, greenGrayConvert, "green.png")
 	convert(img, blueGrayConvert, "blue.png")
+	convert(img, ndviGrayConvert, "ndvi.png")
 }
